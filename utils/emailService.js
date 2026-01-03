@@ -1,40 +1,21 @@
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 
-// Create transporter
-const transporter = nodemailer.createTransport({
-    service: 'gmail', // Use service instead of host/port
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    // Cloud-specific settings
-    pool: true, // Use connection pooling
-    maxConnections: 1, // Limit connections
-    maxMessages: 10, // Max messages per connection
-    // Timeout settings for cloud
-    socketTimeout: 30000, // 30 seconds
-    connectionTimeout: 30000, // 30 seconds
-    // Better TLS handling for cloud
-    tls: {
-        rejectUnauthorized: true // Should be true in production
-    }
-});
+// Set SendGrid API key
+sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
 
 // Test email connection
-transporter.verify(function(error, success) {
-    if (error) {
-        console.error('❌ Email configuration error:', error);
-    } else {
-        console.log('✅ Email server is ready to send messages');
-    }
-});
+if (process.env.SENDGRID_API_KEY) {
+    console.log('✅ SendGrid configured');
+} else {
+    console.warn('⚠️ SendGrid API key not configured');
+}
 
 // Send notification to admin
 exports.sendNotificationToAdmin = async (messageData) => {
     try {
-        const mailOptions = {
-            from: process.env.EMAIL_FROM || `"Portfolio Contact" <${process.env.EMAIL_USER}>`,
+        const msg = {
             to: process.env.ADMIN_EMAIL,
+            from: process.env.EMAIL_FROM || 'portfolio@shayan.co.in',
             subject: `📨 New Message from ${messageData.name}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -92,12 +73,12 @@ exports.sendNotificationToAdmin = async (messageData) => {
             `
         };
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log('📧 Notification email sent:', info.messageId);
-        return { success: true, messageId: info.messageId };
+        await sgMail.send(msg);
+        console.log('📧 Notification email sent via SendGrid');
+        return { success: true };
         
     } catch (error) {
-        console.error('❌ Error sending notification email:', error);
+        console.error('❌ Error sending notification email:', error.response?.body || error.message);
         return { success: false, error: error.message };
     }
 };
@@ -105,9 +86,9 @@ exports.sendNotificationToAdmin = async (messageData) => {
 // Send auto-reply to visitor
 exports.sendAutoReplyToVisitor = async (toEmail, toName) => {
     try {
-        const mailOptions = {
-            from: process.env.EMAIL_FROM || `"Shayan" <${process.env.EMAIL_USER}>`,
+        const msg = {
             to: toEmail,
+            from: process.env.EMAIL_FROM || 'portfolio@shayan.co.in',
             subject: 'Thank you for your message!',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -159,12 +140,12 @@ exports.sendAutoReplyToVisitor = async (toEmail, toName) => {
             `
         };
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log('📧 Auto-reply sent to visitor:', info.messageId);
-        return { success: true, messageId: info.messageId };
+        await sgMail.send(msg);
+        console.log('📧 Auto-reply sent to visitor via SendGrid');
+        return { success: true };
         
     } catch (error) {
-        console.error('❌ Error sending auto-reply:', error);
+        console.error('❌ Error sending auto-reply:', error.response?.body || error.message);
         return { success: false, error: error.message };
     }
 };
@@ -172,19 +153,19 @@ exports.sendAutoReplyToVisitor = async (toEmail, toName) => {
 // Test email function
 exports.testEmail = async () => {
     try {
-        const testOptions = {
-            from: process.env.EMAIL_FROM,
+        const msg = {
             to: process.env.ADMIN_EMAIL,
+            from: process.env.EMAIL_FROM || 'portfolio@shayan.co.in',
             subject: '✅ Portfolio Email Test Successful',
             text: 'Your portfolio website email system is working correctly!',
-            html: '<h2>✅ Email Test Successful</h2><p>Your portfolio website can now send emails.</p>'
+            html: '<h2>✅ Email Test Successful</h2><p>Your portfolio website can now send emails via SendGrid.</p>'
         };
 
-        const info = await transporter.sendMail(testOptions);
-        console.log('✅ Test email sent successfully:', info.messageId);
+        await sgMail.send(msg);
+        console.log('✅ Test email sent successfully via SendGrid');
         return true;
     } catch (error) {
-        console.error('❌ Test email failed:', error);
+        console.error('❌ Test email failed:', error.response?.body || error.message);
         return false;
     }
 };
