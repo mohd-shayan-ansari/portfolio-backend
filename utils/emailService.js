@@ -2,15 +2,21 @@ const nodemailer = require('nodemailer');
 
 // Create transporter
 const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    secure: false,
+    service: 'gmail', // Use service instead of host/port
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
+    // Cloud-specific settings
+    pool: true, // Use connection pooling
+    maxConnections: 1, // Limit connections
+    maxMessages: 10, // Max messages per connection
+    // Timeout settings for cloud
+    socketTimeout: 30000, // 30 seconds
+    connectionTimeout: 30000, // 30 seconds
+    // Better TLS handling for cloud
     tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: true // Should be true in production
     }
 });
 
